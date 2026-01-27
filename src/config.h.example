@@ -1,0 +1,59 @@
+/**
+ * RTK Rover Configuration
+ *
+ * Copy this file to config.h and fill in your values.
+ */
+
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// WiFi Configuration
+#define WIFI_SSID "your_wifi_ssid"
+#define WIFI_PASSWORD "your_wifi_password"
+#define WIFI_MAXIMUM_RETRY 10
+
+// NTRIP Caster Configuration (Client mode - receive corrections)
+#define NTRIP_HOST "your_ntrip_caster_host"
+#define NTRIP_PORT 2101
+#define NTRIP_MOUNTPOINT "your_mountpoint"
+#define NTRIP_USER "rover"
+#define NTRIP_PASSWORD "your_ntrip_password"
+
+// I2C Configuration (QWIIC)
+#define I2C_MASTER_NUM I2C_NUM_0
+#define I2C_MASTER_SDA_IO 21      // ESP32 QWIIC SDA
+#define I2C_MASTER_SCL_IO 22      // ESP32 QWIIC SCL
+#define I2C_MASTER_FREQ_HZ 400000
+
+// ZED-X20P I2C Address
+// Default is 0x42, but check with configure_rtk_rover.py
+#define ZED_I2C_ADDR 0x42
+
+// Position reporting interval (ms)
+#define POSITION_REPORT_INTERVAL_MS 1000
+
+// NTRIP reconnect interval (ms)
+#define NTRIP_RECONNECT_INTERVAL_MS 5000
+
+// Dashboard Configuration
+#define DASHBOARD_ENABLED 1
+#define DASHBOARD_HOST "your_dashboard_host"
+#define DASHBOARD_PORT 3000
+#define DASHBOARD_PATH "/api/position"
+#define DASHBOARD_REPORT_INTERVAL_MS 1000  // How often to send updates
+
+// MAX17048 Fuel Gauge Configuration (I2C)
+// SparkFun Thing Plus ESP32 WROOM USB-C has MAX17048 on I2C bus
+#define MAX17048_I2C_ADDR     0x36
+#define BATTERY_USE_MAX17048  1
+
+// Firmware Version
+#define FIRMWARE_VERSION "1.0.0"
+
+// OTA Configuration
+#define OTA_ENABLED 1
+#define OTA_CHECK_INTERVAL_MS (5 * 60 * 1000)  // Check every 5 minutes
+#define OTA_VERSION_URL "http://your_server:3000/api/ota/version"
+#define OTA_FIRMWARE_URL "http://your_server:3000/api/ota/firmware.bin"
+
+#endif // CONFIG_H

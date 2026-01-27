@@ -1,0 +1,17 @@
+# ESP-IDF SDK Configuration Defaults
+
+# Enable C++ exceptions
+CONFIG_COMPILER_CXX_EXCEPTIONS=y
+
+# WiFi
+CONFIG_ESP_WIFI_SSID="Glasshouse2.4"
+CONFIG_ESP_WIFI_PASSWORD="BIG22slick"
+
+# Increase main task stack size
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# Enable I2C
+CONFIG_I2C_ENABLE=y
+
+# Logging level
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y

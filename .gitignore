@@ -1,0 +1,8 @@
+.pio
+.vscode
+.cache
+*.pyc
+__pycache__
+sdkconfig
+sdkconfig.old
+src/config.h
