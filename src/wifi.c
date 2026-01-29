@@ -247,23 +247,35 @@ static void wifi_manager_task(void *pvParameters)
     wifi_scan_and_connect();
 
     while (1) {
+        // If connected, just sleep and periodically check status
+        if (s_connected) {
+            vTaskDelay(pdMS_TO_TICKS(WIFI_SCAN_INTERVAL_MS));
+            continue;
+        }
+
+        // Not connected - wait for connection or failure event
         EventBits_t bits = xEventGroupWaitBits(
             s_wifi_event_group,
             WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
             pdFALSE,
             pdFALSE,
-            pdMS_TO_TICKS(WIFI_SCAN_INTERVAL_MS)
+            pdMS_TO_TICKS(10000)  // 10 second timeout
         );
 
-        if (bits & WIFI_FAIL_BIT) {
+        if (bits & WIFI_CONNECTED_BIT) {
+            // Connected! Clear the fail bit if set and continue monitoring
+            xEventGroupClearBits(s_wifi_event_group, WIFI_FAIL_BIT);
+            ESP_LOGI(TAG, "WiFi manager: connection established");
+        } else if (bits & WIFI_FAIL_BIT) {
             // Connection failed, rescan
             xEventGroupClearBits(s_wifi_event_group, WIFI_FAIL_BIT);
+            ESP_LOGI(TAG, "WiFi manager: connection failed, rescanning...");
             vTaskDelay(pdMS_TO_TICKS(2000));  // Brief delay before rescan
             wifi_scan_and_connect();
-        } else if (!(bits & WIFI_CONNECTED_BIT)) {
-            // Timeout - check if we're still connected
+        } else {
+            // Timeout with no events - rescan if not connected
             if (!s_connected) {
-                ESP_LOGI(TAG, "Periodic scan for better network...");
+                ESP_LOGI(TAG, "WiFi manager: timeout, rescanning...");
                 wifi_scan_and_connect();
             }
         }
