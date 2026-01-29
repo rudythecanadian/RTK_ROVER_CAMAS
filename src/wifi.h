@@ -19,4 +19,10 @@ esp_err_t wifi_init_sta(void);
  */
 bool wifi_is_connected(void);
 
+/**
+ * Get the SSID of the currently connected network
+ * Returns empty string if not connected
+ */
+const char* wifi_get_ssid(void);
+
 #endif // WIFI_H
