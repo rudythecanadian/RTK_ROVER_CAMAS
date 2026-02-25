@@ -25,6 +25,7 @@
 #include "dashboard_client.h"
 #include "battery.h"
 #include "ota_update.h"
+#include "led.h"
 
 static const char *TAG = "main";
 
@@ -82,14 +83,21 @@ static void rover_task(void *pvParameters)
 
     TickType_t last_ntrip_attempt = 0;
     TickType_t last_position_report = 0;
+    TickType_t last_led_time = 0;
     const TickType_t ntrip_retry_interval = pdMS_TO_TICKS(NTRIP_RECONNECT_INTERVAL_MS);
     const TickType_t position_interval = pdMS_TO_TICKS(POSITION_REPORT_INTERVAL_MS);
+    const TickType_t led_interval = pdMS_TO_TICKS(50);  // 50ms for smooth pulsing
 
     zed_position_t pos;
+    uint8_t last_carr_soln = 0;
 
     while (1) {
         bool wifi_ok = wifi_is_connected();
         bool ntrip_ok = ntrip_client_is_connected();
+
+        // Check for stale NTRIP connection and force reconnect
+        ntrip_client_check_stale();
+        ntrip_ok = ntrip_client_is_connected();
 
         // Maintain NTRIP connection
         if (!ntrip_ok && wifi_ok) {
@@ -131,6 +139,8 @@ static void rover_task(void *pvParameters)
                 float_count++;
             }
 
+            last_carr_soln = pos.carr_soln;
+
             // Report position periodically
             TickType_t now = xTaskGetTickCount();
             if ((now - last_position_report) >= position_interval) {
@@ -143,6 +153,26 @@ static void rover_task(void *pvParameters)
                 dashboard_send_position(&pos, rtcm_bytes_received,
                                         fixed_count, float_count, battery_pct);
 #endif
+            }
+        }
+
+        // Update LED status
+        if ((xTaskGetTickCount() - last_led_time) >= led_interval) {
+            last_led_time = xTaskGetTickCount();
+            bool ntrip_stale = ntrip_client_is_stale();
+
+            if (!wifi_ok) {
+                led_pulse(LED_BLUE);           // Blue pulse = WiFi connecting
+            } else if (!ntrip_ok) {
+                led_pulse(LED_PURPLE);         // Purple pulse = NTRIP connecting
+            } else if (ntrip_stale) {
+                led_pulse(LED_RED);            // Red pulse = stale connection
+            } else if (last_carr_soln == 2) {
+                led_set_color(LED_GREEN);      // Solid green = RTK Fixed
+            } else if (last_carr_soln == 1) {
+                led_pulse(LED_CYAN);           // Cyan pulse = RTK Float
+            } else {
+                led_set_color(LED_YELLOW);     // Yellow = 3D fix, no RTK
             }
         }
 
@@ -187,8 +217,17 @@ void app_main(void)
     ESP_LOGI(TAG, "Mountpoint: %s", NTRIP_MOUNTPOINT);
     ESP_LOGI(TAG, "");
 
+    // Initialize LED first for visual feedback
+    ESP_LOGI(TAG, "Initializing RGB LED...");
+    if (led_init() != ESP_OK) {
+        ESP_LOGW(TAG, "LED initialization failed - continuing without status LED");
+    } else {
+        led_set_color(LED_WHITE);  // White = startup
+    }
+
     // Initialize WiFi
     ESP_LOGI(TAG, "Initializing WiFi...");
+    led_set_color(LED_BLUE);  // Blue = WiFi connecting
     if (wifi_init_sta() != ESP_OK) {
         ESP_LOGE(TAG, "WiFi initialization failed!");
         // Continue anyway - will retry

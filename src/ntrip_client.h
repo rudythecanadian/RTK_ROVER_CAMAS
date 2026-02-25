@@ -37,4 +37,14 @@ int ntrip_client_receive(uint8_t *buffer, size_t max_len);
  */
 uint32_t ntrip_client_get_bytes_received(void);
 
+/**
+ * Check if connection is stale (connected but no data for >15 sec)
+ */
+bool ntrip_client_is_stale(void);
+
+/**
+ * Force reconnect if connection is stale
+ */
+void ntrip_client_check_stale(void);
+
 #endif // NTRIP_CLIENT_H

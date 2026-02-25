@@ -19,6 +19,10 @@ static const char *TAG = "ntrip_client";
 static int s_sock = -1;
 static bool s_connected = false;
 static uint32_t s_bytes_received = 0;
+static TickType_t s_last_data_time = 0;
+
+// How long without data before we consider the connection stale
+#define NTRIP_STALE_TIMEOUT_MS 15000
 
 /**
  * Base64 encode credentials for HTTP Basic Auth
@@ -156,6 +160,7 @@ esp_err_t ntrip_client_connect(void)
 
         ESP_LOGI(TAG, "NTRIP caster connected - receiving RTCM corrections");
         s_connected = true;
+        s_last_data_time = xTaskGetTickCount();
 
         // Set non-blocking for data reception
         struct timeval recv_timeout = {
@@ -218,10 +223,28 @@ int ntrip_client_receive(uint8_t *buffer, size_t max_len)
     }
 
     s_bytes_received += received;
+    s_last_data_time = xTaskGetTickCount();
     return received;
 }
 
 uint32_t ntrip_client_get_bytes_received(void)
 {
     return s_bytes_received;
+}
+
+bool ntrip_client_is_stale(void)
+{
+    if (!s_connected) return false;
+
+    TickType_t elapsed = xTaskGetTickCount() - s_last_data_time;
+    return elapsed > pdMS_TO_TICKS(NTRIP_STALE_TIMEOUT_MS);
+}
+
+void ntrip_client_check_stale(void)
+{
+    if (ntrip_client_is_stale()) {
+        ESP_LOGW(TAG, "NTRIP data stale (>%d sec) - forcing reconnect",
+                 NTRIP_STALE_TIMEOUT_MS / 1000);
+        ntrip_client_disconnect();
+    }
 }
